@@ -1,0 +1,2 @@
+# Nova-pay-fraud-detection-system
+The purpose of this project is to develop a machine learning-based fraud detection system for NovaPay, replacing its existing static, rules-based approach. The solution will aim to enhance the accuracy of detecting fraudulent transactions while minimizing the rate of false positives (legitimate transactions wrongly flagged as fraudulent).
