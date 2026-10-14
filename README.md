@@ -1,10 +1,23 @@
-# Nova-pay-fraud-detection-system
-The purpose of this project is to develop a machine learning-based fraud detection system for NovaPay, replacing its existing static, rules-based approach. The solution will aim to enhance the accuracy of detecting fraudulent transactions while minimizing the rate of false positives (legitimate transactions wrongly flagged as fraudulent).
-#Steps followed to achieve our desired project aim are as follow; 
-Data loading
-Check shape and colunmn names
-inspect data types
-check for missing values
-find duplicates
-review summary statistics
-check for outliers
+# Nova pay fraud detection project
+## Overview
+The Nova Pay project is a fraud-data preparation workflow built on nova_pay_combined.csv: 11,400 cross-border payment transactions with a binary is_fraud label. So far it covers profiling, cleaning, feature engineering and some targeted investigation.
+### Data Cleaning         
+ The timestamp column was initially stored as text and was therefore converted into a valid datetime format. However, 29 entries contained missing values. Similarly, amount_src was stored as text because some amounts included commas, such as "9,998.85". After removing the commas, the column was converted to a numeric format.The dataset also contained 200 exact duplicate rows, which were removed. This reduced the number of records from 11,400 to 11,200. The categorical columns were then reviewed for formatting and spelling issues. These included unnecessary spaces, such as " US", inconsistent capitalisation, such as "STANDARD" and "WEB", misspellings such as "standrd", "enhancd", "mobille" and "weeb", and placeholder values such as "unknown" and "nan". All categories were standardised to ensure each category had one consistent spelling, while placeholder entries were replaced with proper missing values. Finally, the numeric columns were checked for values that were not realistic for genuine transactions. These included negative transaction amounts as low as -9,997.16, negative fees of -1.0, a placeholder fee of 9,999.99, IP risk scores greater than 1, negative device trust scores, and negative transaction counts. These values were considered data errors and were set to missing. To verify that 9,999.99 was a placeholder rather than a genuine fee, the 103 transactions with this value were examined. They were evenly distributed across all channels and currencies, and only 3.9% were fraudulent—lower than the overall fraud rate of 8.9%. This supported the conclusion that 9,999.99 was a system placeholder rather than a real fee or an indicator of fraud.
+### Missing Values
+#### Datetime stamp
+it was observed that timestamp had 29 missing values and they were dropped because it was impossible to get the exact date and time the transactions were made.
+#### Amount_usd
+ for amount_usd, 300 missing values were detected however it was resolved by; mean or median was not applied because the relationship is exact, so a statistical fill would add error for no benefit. It would also flatten the amount distribution, which matters for fraud, where unusual amounts carry signal. In other to resolve the missing value in amount_usd, amount_src is cleaned first (commas removed, sign fixed with the absolute value), then the missing amount_usd is filled as amount_src × rate. Flagged as amount_usd_recovered column marks the 300 repaired rows.
+ #### fee
+ I found 490 fees that couldn't be trusted: 290 blank and 200 placeholders (−1 and 9999.99). I set them to missing, flagged them in fee_missing, and estimated each one as the typical fee percentage for its source currency times the transaction amount. I chose that over a channel median because fees follow the amount, not the channel. In a hidden-value test it cut the average error from about 50% to about 22%. For modelling, fit the percentage on training data only.
+#### kyc_tier
+I filled the 329 missing kyc_tier values from each customer's other transactions, because a customer's tier never changes. That was right 100% of the time on hidden values, against 77% for a country or overall mode. Two rows with no other source got standard, and every filled row is flagged in kyc_missing.
+##### fee outlier checkes 
+Remove the −1 and 9999.99 placeholder fees first, because they are errors, not outliers. Then apply the IQR rule on fee as a share of the amount, which flags fees above 4.17% (583 rows, 6.1%). Fee scales with the amount, so on the raw fee the rule flags 725 rows that are mostly just large transactions.Flag the outliers and keep them, since they are valid values and show no link to fraud.
+#### EDA
+The histograms showed that amount and fee are heavily skewed (a log scale fixes this), with a separate cluster at about $10,000, and that account age moves in steps because a few customers dominate. I drew them to see each variable's shape.
+ the bar chart has four panels: channel, KYC tier, home country and destination currency. They use the base block only, which is the first 10,000 rows, with 200 duplicates and the appended block left out. Each bar's height is the number of transactions. The fraud rate is printed on or above each bar.
+Channel: Mobile has the most transactions. Web has the highest fraud rate, at 2.6%.
+KYC tier: Standard tier holds most transactions. Low tier has the highest fraud rate (3.5%) and enhanced the lowest (0.4%). Tier looks like a useful signal.
+Home country: The US is about 72% of transactions. The UK rate of 5.0% comes from one customer with 88 frauds, so don't read it as a country effect.
+Destination currency: Counts are about even, except MXN, which is smaller. The rates are all labelled on the bars, and NGN (3.3%) and MXN (3.0%) are highest.
